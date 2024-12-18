@@ -35,90 +35,108 @@ fdisk -l
 ```
 
 ### Partition disk:
-#### Run `fdisk` to create Linux partitions:
-(forked from https://gist.github.com/mjnaderi/28264ce68f87f52f2cabb823a503e673)
-```
-fdisk /dev/<your-disk>
-```
-
-If you have installed Windows 11 on that disk, you already have a GPT partition table and EFI partition here.  
-
-Otherwise, if needed, create an empty GPT partition table using the `g` command (**WARNING:** This will erase the entire disk):
-```
-Command (m for help): g
-Created a new GPT disklabel (GUID: ...).
-```
-
-#### Create partitions:
-1. Create the EFI partition:
+1.  #### Run `fdisk` to create Linux partitions:
+	(forked from https://gist.github.com/mjnaderi/28264ce68f87f52f2cabb823a503e673)
 	```
-	Command (m for help): n
-	Partition number (1-128, default 1): <Enter>
-	First sector (2048-X, default 2048): <Enter>
-	Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-Y, default Y): +200M
-
-	Command (m for help): t
-	Selected partition 1
-	Partition type or alias (type L to list all): uefi
+	fdisk /dev/<your-disk>
 	```
 
-REMOVE?
-1. Create the Boot partition:
-	```
-	Command (m for help): n
-	Partition number: <Enter>
-	First sector: <Enter>
-	Last sector, +/-sectors or +/-size{K,M,G,T,P}: +512M
+	If you have installed Windows 11 on that disk, you already have a GPT partition table and EFI partition here.  
 
-	Command (m for help): t
-	Partition number (1,2, default 2): <Enter>
-	Partition type or alias (type L to list all): linux
+	Otherwise, if needed, create an empty GPT partition table using the `g` command (**WARNING:** This will erase the entire disk):
+	```
+	Command (m for help): g
+	Created a new GPT disklabel (GUID: ...).
 	```
 
-1. Create the LUKS partition:
+1. #### Create partitions:
+	1. Create the EFI partition:
+		```
+		Command (m for help): n
+		Partition number (1-128, default 1): <Enter>
+		First sector (2048-X, default 2048): <Enter>
+		Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-Y, default Y): +200M
+
+		Command (m for help): t
+		Selected partition 1
+		Partition type or alias (type L to list all): uefi
+		```
+
+	1. Create the Boot partition:
+		```
+		Command (m for help): n
+		Partition number: <Enter>
+		First sector: <Enter>
+		Last sector, +/-sectors or +/-size{K,M,G,T,P}: +512M
+
+		Command (m for help): t
+		Partition number (1,2, default 2): <Enter>
+		Partition type or alias (type L to list all): linux
+		```
+
+	1. Create the LUKS partition:
+		```
+		Command (m for help): n
+		Partition number: <Enter>
+		First sector: <Enter>
+		Last sector, +/-sectors or +/-size{K,M,G,T,P}: <Enter>
+
+		Command (m for help): t
+		Partition number (1,2,3, default 3): <Enter>
+		Partition type or alias (type L to list all): linux
+		```
+
+1. #### Print the partition table using the `p` command and check that everything is OK:
 	```
-	Command (m for help): n
-	Partition number: <Enter>
-	First sector: <Enter>
-	Last sector, +/-sectors or +/-size{K,M,G,T,P}: <Enter>
-
-	Command (m for help): t
-	Partition number (1,2,3, default 3): <Enter>
-	Partition type or alias (type L to list all): linux
+	Command (m for help): p
+	Disk ...
 	```
 
-#### Print the partition table using the `p` command and check that everything is OK:
-```
-Command (m for help): p
-Disk ...
-```
+	##### Info:  
+	- According to numbers lately following naming used:  
+		- partition 1: `/dev/<your-efi-partition>` - EFI
+		- partition 2: `/dev/<your-boot-luks-partition>` - boot
+		- partition 3: `/dev/<your-root-luks-partition>` - root
 
-#### Write changes to the disk using the `w` command.
-(Make sure you know what you're doing before running this command).
-```
-Command (m for help): w
-The partition table has been altered.
-Calling ioctrl() to re-read partition table.
-Syncing disks.
-```
+		Example:
+		```
+		/dev/nvme0n1p1 -> /dev/<your-efi-partition>
+		/dev/nvme0n1p1 -> /dev/<your-boot-luks-partition>
+		/dev/nvme0n1p1 -> /dev/<your-root-luks-partition>
+		```
+
+1. #### Write changes to the disk using the `w` command.
+	(Make sure you know what you're doing before running this command).
+	```
+	Command (m for help): w
+	The partition table has been altered.
+	Calling ioctrl() to re-read partition table.
+	Syncing disks.
+	```
 
 ### Format partitions:
-1.  Format the EFI and Boot Partitions:
+1.  Format the EFI partition:
 	```
-	mkfs.fat -F 32 /dev/<your-disk-efi>
-	REMOVE? mkfs.ext4 /dev/<your-disk-boot>
-	```
-
-1.  Set up the encrypted partition.
-	You can choose any other name instead of `root`:
-	```
-	cryptsetup --use-random luksFormat /dev/<your-disk-luks>
-	cryptsetup luksOpen /dev/<your-disk-luks> root
+	mkfs.fat -F 32 /dev/<your-efi-partition>
 	```
 
-1.  Prepare encrypted volume:  
-	#### Option A: Create BTRFS on top of LUKS (recommended):  
-	1. Format partition:
+1.  Format the Boot partition:
+	```
+	cryptsetup -v --use-random luksFormat --pbkdf pbkdf2 /dev/<your-boot-luks-partition>
+	cryptsetup luksOpen /dev/<your-boot-luks-partition> boot
+	mkfs.ext4 /dev/mapper/boot
+	```
+	Note: You can choose any other name instead of `boot`.
+
+1.  Set up root partition:
+	1. Set up encrypted partition:
+		```
+		cryptsetup -v --use-random luksFormat /dev/<your-root-luks-partition>
+		cryptsetup luksOpen /dev/<your-root-luks-partition> root
+		```
+		Note: You can choose any other name instead of `root`.
+
+	1. Format the encrypted partition:
 		```
 		mkfs.btrfs -L archlinux /dev/mapper/root
 		```
@@ -136,23 +154,31 @@ Syncing disks.
 		umount /mnt
 		```
 
-	1. Mount BTRFS subvolumes (for installation):  
-		(Selected mount flags: `noatime,discard=async,compress=zstd:1,ssd,space_cache=v2`)
-		```
-		mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@ /dev/mapper/root /mnt
+### Mount partitions:
+1. Mount BTRFS subvolumes (for installation):  
+	(Selected mount flags: `noatime,discard=async,compress=zstd:1,ssd,space_cache=v2`)
+	```
+	mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@ /dev/mapper/root /mnt
 
-		mkdir -p /mnt/home /mnt/.snapshots /mnt/efi /mnt/boot/EFI
+	mkdir -p /mnt/home /mnt/.snapshots
 
-		mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@home /dev/mapper/root /mnt/home
-		mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@snapshots /dev/mapper/root /mnt/.snapshots
-		```
+	mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@home /dev/mapper/root /mnt/home
+	mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@snapshots /dev/mapper/root /mnt/.snapshots
+	```
 
-	1.  Mount EFI and BOOT filesystems:
-		```
-		REMOVE?
-		mount /dev/<your-disk-boot> /mnt/boot
-		mount /dev/<your-disk-efi> /mnt/boot/EFI
-		```
+1.  Mount EFI and BOOT filesystems:
+	```
+	mkdir -p /mnt/boot
+	mount /dev/mapper/boot /mnt/boot
+	
+	mkdir -p /mnt/boot/EFI
+	mount /dev/<your-efi-partition> /mnt/boot/EFI
+	```
+
+1.  Check mounts (verify last entries):
+	```
+	mount
+	```
 ## Install and configure Base System
 
 ### (Optional) Select the mirrors  
@@ -166,11 +192,19 @@ nano /etc/pacman.d/mirrorlist
 # pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh
 ```
 
-### Generate an fstab file
+### Generate an fstab file:
 ```
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
+```
 
+### Generate an cryptab file TODO: 
+(use `blkid -o value /dev/<your-boot-luks-partition> | head -n 1` to get boot-disk-luks-uuid)
+```
+# Optionally: append boot-disk-luks-uuid to use later:
+blkid -o value /dev/<your-boot-luks-partition> | head -n 1 >> /etc/crypttab
+
+nano /etc/crypttab
 ```
 
 ### Chroot into the new system: 
@@ -236,14 +270,18 @@ mkinitcpio -P
 
 1. Install GRUB:  
 	```
-	# with CA Keys:
+	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --modules="part_gpt part_msdos tpm" --recheck
+	
 
 	# without Secure Boot
-	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRÓB --modules="tpm" --disable-shim-lock --recheck
+	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --modules="part_gpt part_msdos tpm" --disable-shim-lock --recheck
 	```
 
 1. Edit `/etc/default/grub`:
 	```
+	# Optionally: append root-disk-luks-uuid to use later:
+	blkid -o value /dev/<your-root-luks-partition> | head -n 1 >> /etc/default/grub
+
 	nano /etc/default/grub
 	```
 
@@ -272,20 +310,19 @@ mkinitcpio -P
 		GRUB_ENABLE_CRYPTODISK=y
 		```
 
-	1. set correct `cryptdevice` in `GRUB_CMDLINE_LINUX`:
+	1. set correct `cryptdevice` in `GRUB_CMDLINE_LINUX`:  
+		(use `blkid -o value /dev/<your-root-luks-partition> | head -n 1` )
 		```
-		GRUB_CMDLINE_LINUX="cryptdevice=/dev/<your-disk-luks>:root"
+		GRUB_CMDLINE_LINUX="cryptdevice=UUID=<your-root-luks-partition-UUID>:root root=/dev/mapper/root"
+		# or without UUID
+		GRUB_CMDLINE_LINUX="cryptdevice=/dev/<your-root-luks-partition>:root root=/dev/mapper/root"
 		```
 
-### 
-```
+1. Generate grub.cfg:
+	```bash
+	grub-mkconfig -0 /boot/grub/grub.cfg
+	```
 
-```
-
-### 
-```
-
-```
 
 ### 
 ```
@@ -315,4 +352,16 @@ mkinitcpio -P
 ### 
 ```
 
+```
+
+### 
+```
+
+```
+
+### Reboot
+```
+exit
+umount -R /mnt
+reboot
 ```
