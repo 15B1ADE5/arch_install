@@ -1,3 +1,10 @@
+# LiveUSB preparation
+```
+gpg -v archlinux-*.iso.sig
+
+dd bs=4M if=archlinux-*.iso of=/dev/sdX status=progress oflag=sync
+```
+
 # Boot
 
 ## After live-usb booted
@@ -18,6 +25,13 @@ cat /sys/firmware/efi/fw_platform_size # should return 64
 ```
 
 ### Check connection to Internet (Ethernet):
+
+#### Connect to WiFi:
+```
+iwctl
+station <wlan device name> connect <wifi-station-name tab-auto-complete>
+```
+
 ```
 ip addr
 ping archlinux.org
@@ -74,7 +88,7 @@ fdisk -l
 		Partition type or alias (type L to list all): linux
 		```
 
-	1. Create the LUKS partition:
+	1. Create the LUKS Root partition:
 		```
 		Command (m for help): n
 		Partition number: <Enter>
@@ -95,13 +109,13 @@ fdisk -l
 	##### Info:  
 	- According to numbers lately following naming used:  
 		- partition 1: `/dev/<your-efi-partition>` - EFI
-		- partition 2: `/dev/<your-boot-luks-partition>` - boot
+		- partition 2: `/dev/<your-boot-partition>` - boot
 		- partition 3: `/dev/<your-root-luks-partition>` - root
 
 		Example:
 		```
 		/dev/nvme0n1p1 -> /dev/<your-efi-partition>
-		/dev/nvme0n1p1 -> /dev/<your-boot-luks-partition>
+		/dev/nvme0n1p1 -> /dev/<your-boot-partition>
 		/dev/nvme0n1p1 -> /dev/<your-root-luks-partition>
 		```
 
@@ -122,11 +136,8 @@ fdisk -l
 
 1.  Format the Boot partition:
 	```
-	cryptsetup -v --use-random luksFormat --pbkdf pbkdf2 /dev/<your-boot-luks-partition>
-	cryptsetup luksOpen /dev/<your-boot-luks-partition> boot
-	mkfs.ext4 /dev/mapper/boot
+	mkfs.ext4 /dev/<your-boot-partition>
 	```
-	Note: You can choose any other name instead of `boot`.
 
 1.  Set up root partition:
 	1. Set up encrypted partition:
@@ -169,7 +180,7 @@ fdisk -l
 1.  Mount EFI and BOOT filesystems:
 	```
 	mkdir -p /mnt/boot
-	mount /dev/mapper/boot /mnt/boot
+	mount /dev/<your-boot-partition> /mnt/boot
 	
 	mkdir -p /mnt/boot/EFI
 	mount /dev/<your-efi-partition> /mnt/boot/EFI
@@ -189,7 +200,7 @@ nano /etc/pacman.d/mirrorlist
 
 ### Install essential packages:
 ```
-# pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh
+# pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh dhcpcd wpa_supplicant
 ```
 
 ### Generate an fstab file:
