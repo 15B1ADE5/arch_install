@@ -1,5 +1,5 @@
 # LiveUSB preparation
-```
+```bash
 gpg -v archlinux-*.iso.sig
 
 dd bs=4M if=archlinux-*.iso of=/dev/sdX status=progress oflag=sync
@@ -10,48 +10,63 @@ dd bs=4M if=archlinux-*.iso of=/dev/sdX status=progress oflag=sync
 ## After live-usb booted
 
 ### load locale:
-```
+```bash
 loadkeys pl
 ```
 
 ### (Optional) set font:
-```
+```bash
 setfont ter-120b
 ```
 
 ### Verify the boot mode
-```
+```bash
 cat /sys/firmware/efi/fw_platform_size # should return 64
 ```
 
-### Check connection to Internet (Ethernet):
+### Connect to Internet:
 
 #### Connect to WiFi:
-```
+```bash
 iwctl
-station <wlan device name> connect <wifi-station-name tab-auto-complete>
 ```
 
 ```
+device list
+device wlan0 set-property Powered on
+
+adapter list
+adapter phy0 set-property Powered on
+
+station wlan0 scan
+station wlan0 get-networks
+
+station wlan0 connect <SSID>
+station wlan0 connect-hidden <SSID>
+```
+
+
+#### Chech connection
+```bash
 ip addr
 ping archlinux.org
 ```
 
 ### Update the system clock
-```
+```bash
 timedatectl
 ```
 
 ## Prepare partitions
 #### List available devices:
-```
+```bash
 fdisk -l
 ```
 
 ### Partition disk:
 1.  #### Run `fdisk` to create Linux partitions:
 	(forked from https://gist.github.com/mjnaderi/28264ce68f87f52f2cabb823a503e673)
-	```
+	```bash
 	fdisk /dev/<your-disk>
 	```
 
@@ -130,30 +145,30 @@ fdisk -l
 
 ### Format partitions:
 1.  Format the EFI partition:
-	```
+	```bash
 	mkfs.fat -F 32 /dev/<your-efi-partition>
 	```
 
 1.  Format the Boot partition:
-	```
+	```bash
 	mkfs.ext4 /dev/<your-boot-partition>
 	```
 
 1.  Set up root partition:
 	1. Set up encrypted partition:
-		```
+		```bash
 		cryptsetup -v --use-random luksFormat /dev/<your-root-luks-partition>
 		cryptsetup luksOpen /dev/<your-root-luks-partition> root
 		```
 		Note: You can choose any other name instead of `root`.
 
 	1. Format the encrypted partition:
-		```
+		```bash
 		mkfs.btrfs -L archlinux /dev/mapper/root
 		```
 	
 	1. Create BTRFS subvolumes:
-		```
+		```bash
 		# Mount the root fs
 		mount /dev/mapper/root /mnt
 
@@ -168,7 +183,7 @@ fdisk -l
 ### Mount partitions:
 1. Mount BTRFS subvolumes (for installation):  
 	(Selected mount flags: `noatime,discard=async,compress=zstd:1,ssd,space_cache=v2`)
-	```
+	```bash
 	mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@ /dev/mapper/root /mnt
 
 	mkdir -p /mnt/home /mnt/.snapshots
@@ -178,7 +193,7 @@ fdisk -l
 	```
 
 1.  Mount EFI and BOOT filesystems:
-	```
+	```bash
 	mkdir -p /mnt/boot
 	mount /dev/<your-boot-partition> /mnt/boot
 	
@@ -187,31 +202,31 @@ fdisk -l
 	```
 
 1.  Check mounts (verify last entries):
-	```
+	```bash
 	mount
 	```
 ## Install and configure Base System
 
 ### (Optional) Select the mirrors  
 Move the geographically closest mirrors to the top of the list:
-```
+```bash
 nano /etc/pacman.d/mirrorlist
 ```
 
 ### Install essential packages:
-```
+```bash
 # pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh dhcpcd wpa_supplicant
 ```
 
 ### Generate an fstab file:
-```
+```bash
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
 
 ### Generate an cryptab file TODO: 
 (use `blkid -o value /dev/<your-boot-luks-partition> | head -n 1` to get boot-disk-luks-uuid)
-```
+```bash
 # Optionally: append boot-disk-luks-uuid to use later:
 blkid -o value /dev/<your-boot-luks-partition> | head -n 1 >> /etc/crypttab
 
@@ -219,12 +234,12 @@ nano /etc/crypttab
 ```
 
 ### Chroot into the new system: 
-```
+```bash
 arch-chroot /mnt
 ```
 
 ### Set TimeZone:
-```
+```bash
 # See available timezones:
 ls /usr/share/zoneinfo/
 
@@ -233,12 +248,12 @@ ln -sf /usr/share/zoneinfo/Europe/Warsaw /etc/localtime
 ```
 
 ### Run hwclock to generate /etc/adjtime:  
-```
+```bash
 hwclock --systohc
 ```
 
 ### Set Localization:  
-```
+```bash
 # uncomment necessary (en_GB.UTF-8 en_US.UTF-8 pl_PL.UTF-8 ru_RU.UTF-8 uk_UA.UTF-8)
 nano /etc/locale.gen
 
@@ -249,17 +264,17 @@ echo KEYMAP=pl > /etc/vconsole.conf
 ```
 
 ### Set hostname:  
-```
+```bash
 echo <yourhostname> > /etc/hostname
 ```
 
 ### Set the root password:  
-```
+```bash
 passwd
 ```
 
 ### Create a user:  
-```
+```bash
 useradd -m -G wheel <yourusername>
 passwd <yourusername>
 
@@ -268,7 +283,7 @@ EDITOR=nano visudo
 ```
 
 ### Configure `mkinitcpio` with modules needed to create the initramfs image:
-```
+```bash
 # Add 'encrypt' to HOOKS before 'filesystems'
 nano /etc/mkinitcpio.conf
 
@@ -280,7 +295,7 @@ mkinitcpio -P
 (`grub`, `grub-btrfs`, `dosfstools`, `os-prober`, `mtools` and `efibootmgr` packages required)  
 
 1. Install GRUB:  
-	```
+	```bash
 	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --modules="part_gpt part_msdos tpm" --recheck
 	
 
@@ -289,7 +304,7 @@ mkinitcpio -P
 	```
 
 1. Edit `/etc/default/grub`:
-	```
+	```bash
 	# Optionally: append root-disk-luks-uuid to use later:
 	blkid -o value /dev/<your-root-luks-partition> | head -n 1 >> /etc/default/grub
 
@@ -371,7 +386,7 @@ mkinitcpio -P
 ```
 
 ### Reboot
-```
+```bash
 exit
 umount -R /mnt
 reboot
