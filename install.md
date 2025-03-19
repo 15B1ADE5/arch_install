@@ -54,6 +54,8 @@ ping archlinux.org
 
 ### Update the system clock
 ```bash
+timedatectl list-timezones
+timedatectl set-timezone Europe/Warsaw
 timedatectl
 ```
 
@@ -215,22 +217,13 @@ nano /etc/pacman.d/mirrorlist
 
 ### Install essential packages:
 ```bash
-# pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh dhcpcd wpa_supplicant
+pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh dhcpcd
 ```
 
 ### Generate an fstab file:
 ```bash
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
-```
-
-### Generate an cryptab file TODO: 
-(use `blkid -o value /dev/<your-boot-luks-partition> | head -n 1` to get boot-disk-luks-uuid)
-```bash
-# Optionally: append boot-disk-luks-uuid to use later:
-blkid -o value /dev/<your-boot-luks-partition> | head -n 1 >> /etc/crypttab
-
-nano /etc/crypttab
 ```
 
 ### Chroot into the new system: 
@@ -296,15 +289,10 @@ mkinitcpio -P
 
 1. Install GRUB:  
 	```bash
-	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --modules="part_gpt part_msdos tpm" --recheck
-	
-
-	# without Secure Boot
-	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --modules="part_gpt part_msdos tpm" --disable-shim-lock --recheck
-	```
+	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --recheck
 
 1. Edit `/etc/default/grub`:
-	```bash
+	```
 	# Optionally: append root-disk-luks-uuid to use later:
 	blkid -o value /dev/<your-root-luks-partition> | head -n 1 >> /etc/default/grub
 
@@ -336,7 +324,7 @@ mkinitcpio -P
 		GRUB_ENABLE_CRYPTODISK=y
 		```
 
-	1. set correct `cryptdevice` in `GRUB_CMDLINE_LINUX`:  
+	1. set correct `cryptdevice` in `GRUB_CMDLINE_LINUX`:
 		(use `blkid -o value /dev/<your-root-luks-partition> | head -n 1` )
 		```
 		GRUB_CMDLINE_LINUX="cryptdevice=UUID=<your-root-luks-partition-UUID>:root root=/dev/mapper/root"
@@ -346,44 +334,9 @@ mkinitcpio -P
 
 1. Generate grub.cfg:
 	```bash
-	grub-mkconfig -0 /boot/grub/grub.cfg
+	grub-mkconfig -o /boot/grub/grub.cfg
 	```
 
-
-### 
-```
-
-```
-
-### 
-```
-
-```
-
-### 
-```
-
-```
-
-### 
-```
-
-```
-
-### 
-```
-
-```
-
-### 
-```
-
-```
-
-### 
-```
-
-```
 
 ### Reboot
 ```bash
@@ -391,3 +344,7 @@ exit
 umount -R /mnt
 reboot
 ```
+
+
+# References
+- [Efficient Encrypted UEFI-Booting Arch Installation](https://gist.github.com/HardenedArray/31915e3d73a4ae45adc0efa9ba458b07)
