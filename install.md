@@ -5,7 +5,7 @@ gpg -v archlinux-*.iso.sig
 dd bs=4M if=archlinux-*.iso of=/dev/sdX status=progress oflag=sync
 ```
 
-# Boot
+# Boot LiveUSB
 
 ## After live-usb booted
 
@@ -347,6 +347,17 @@ systemctl enable NetworkManager.service grub-btrfsd
 exit
 umount -R /mnt
 reboot
+```
+
+
+# Further installation
+After GRUB started fresh installed system a prompt to unclock luks partition will be shown
+
+## Network Connection
+Use NetworkManager to connect to WIFI:
+```bash
+nmcli device wifi list
+nmcli device wifi connect SSID_or_BSSID --ask
 ```
 
 
