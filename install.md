@@ -338,7 +338,7 @@ mkinitcpio -P
 	```
 ### Enable required services
 ```bash
-systemctl enable NetworkManager.service
+systemctl enable NetworkManager.service grub-btrfsd
 ```
 
 
