@@ -336,6 +336,10 @@ mkinitcpio -P
 	```bash
 	grub-mkconfig -o /boot/grub/grub.cfg
 	```
+### Enable required services
+```bash
+systemctl enable NetworkManager.service
+```
 
 
 ### Reboot
