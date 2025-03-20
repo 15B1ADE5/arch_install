@@ -217,7 +217,7 @@ nano /etc/pacman.d/mirrorlist
 
 ### Install essential packages:
 ```bash
-pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh dhcpcd
+pacstrap -K /mnt base base-devel linux linux-firmware grub grub-btrfs dosfstools os-prober mtools efibootmgr git nano sudo usbutils networkmanager man-db man-pages python gcc openssh
 ```
 
 ### Generate an fstab file:
