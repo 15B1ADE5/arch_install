@@ -72,7 +72,7 @@ fdisk -l
 	fdisk /dev/<your-disk>
 	```
 
-	If you have installed Windows 11 on that disk, you already have a GPT partition table and EFI partition here.  
+	If you have installed Windows 11 on that disk, you already have a GPT partition table and EFI partition here.
 
 	Otherwise, if needed, create an empty GPT partition table using the `g` command (**WARNING:** This will erase the entire disk):
 	```
@@ -123,8 +123,8 @@ fdisk -l
 	Disk ...
 	```
 
-	##### Info:  
-	- According to numbers lately following naming used:  
+	##### Info:
+	- According to numbers lately following naming used:
 		- partition 1: `/dev/<your-efi-partition>` - EFI
 		- partition 2: `/dev/<your-boot-partition>` - boot
 		- partition 3: `/dev/<your-root-luks-partition>` - root
@@ -168,7 +168,7 @@ fdisk -l
 		```bash
 		mkfs.btrfs -L archlinux /dev/mapper/root
 		```
-	
+
 	1. Create BTRFS subvolumes:
 		```bash
 		# Mount the root fs
@@ -183,7 +183,7 @@ fdisk -l
 		```
 
 ### Mount partitions:
-1. Mount BTRFS subvolumes (for installation):  
+1. Mount BTRFS subvolumes (for installation):
 	(Selected mount flags: `noatime,discard=async,compress=zstd:1,ssd,space_cache=v2`)
 	```bash
 	mount -o noatime,discard=async,compress=zstd:1,ssd,space_cache=v2,subvol=@ /dev/mapper/root /mnt
@@ -198,7 +198,7 @@ fdisk -l
 	```bash
 	mkdir -p /mnt/boot
 	mount /dev/<your-boot-partition> /mnt/boot
-	
+
 	mkdir -p /mnt/boot/EFI
 	mount /dev/<your-efi-partition> /mnt/boot/EFI
 	```
@@ -209,7 +209,7 @@ fdisk -l
 	```
 ## Install and configure Base System
 
-### (Optional) Select the mirrors  
+### (Optional) Select the mirrors
 Move the geographically closest mirrors to the top of the list:
 ```bash
 nano /etc/pacman.d/mirrorlist
@@ -226,7 +226,7 @@ genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
 
-### Chroot into the new system: 
+### Chroot into the new system:
 ```bash
 arch-chroot /mnt
 ```
@@ -240,12 +240,12 @@ ls /usr/share/zoneinfo/
 ln -sf /usr/share/zoneinfo/Europe/Warsaw /etc/localtime
 ```
 
-### Run hwclock to generate /etc/adjtime:  
+### Run hwclock to generate /etc/adjtime:
 ```bash
 hwclock --systohc
 ```
 
-### Set Localization:  
+### Set Localization:
 ```bash
 # uncomment necessary (en_GB.UTF-8 en_US.UTF-8 pl_PL.UTF-8 ru_RU.UTF-8 uk_UA.UTF-8)
 nano /etc/locale.gen
@@ -256,17 +256,17 @@ echo LANG=en_GB.UTF-8 > /etc/locale.conf
 echo KEYMAP=pl > /etc/vconsole.conf
 ```
 
-### Set hostname:  
+### Set hostname:
 ```bash
 echo <yourhostname> > /etc/hostname
 ```
 
-### Set the root password:  
+### Set the root password:
 ```bash
 passwd
 ```
 
-### Create a user:  
+### Create a user:
 ```bash
 useradd -m -G wheel <yourusername>
 passwd <yourusername>
@@ -277,17 +277,17 @@ EDITOR=nano visudo
 
 ### Configure `mkinitcpio` with modules needed to create the initramfs image:
 ```bash
-# Add 'encrypt' to HOOKS before 'filesystems'
+# Add 'encrypt' to HOOKS before 'filesystems' and remove 'consolefont'
 nano /etc/mkinitcpio.conf
 
 # regenerate initramfs image
 mkinitcpio -P
 ```
 
-### Setup GRUB:  
-(`grub`, `grub-btrfs`, `dosfstools`, `os-prober`, `mtools` and `efibootmgr` packages required)  
+### Setup GRUB:
+(`grub`, `grub-btrfs`, `dosfstools`, `os-prober`, `mtools` and `efibootmgr` packages required)
 
-1. Install GRUB:  
+1. Install GRUB:
 	```bash
 	grub-install --target=x86_64-efi --efi-directory=/boot/EFI --bootloader-id=GRUB --recheck
 
@@ -318,7 +318,7 @@ mkinitcpio -P
 	1. Comment out `GRUB_DISABLE_RECOVERY=true` to enable generation of recovery mode menu entries.
 
 	1. Uncomment `GRUB_DISABLE_OS_PROBER=false` to enable os-prober.
-	
+
 	1. Set/add or uncomment `GRUB_ENABLE_CRYPTODISK`:
 		```
 		GRUB_ENABLE_CRYPTODISK=y
@@ -340,6 +340,16 @@ mkinitcpio -P
 ```bash
 systemctl enable NetworkManager.service grub-btrfsd
 ```
+
+1. [Optional] Enable multilib
+```bash
+nano /etc/pacman.conf
+```
+```
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+```
+
 
 
 ### Reboot
