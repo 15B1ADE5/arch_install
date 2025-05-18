@@ -128,16 +128,16 @@ If your machine had dbx database cleared during Secure boot setup, it's recommen
 	sbctl status
 	```
 
-1. If `Setup Mode: Enabled`:
-	you can enroll `dbx` database without signing:
-	```bash
-	sudo efi-updatevar -a -e -f /var/lib/sbctl/keys/custom/dbx/original_dbx.esl -k /var/lib/sbctl/keys/KEK/KEK.key dbx
-	```
+	1. If `Setup Mode: Enabled`:
+		you can enroll `dbx` database without signing:
+		```bash
+		sudo efi-updatevar -a -e -f /var/lib/sbctl/keys/custom/dbx/original_dbx.esl -k /var/lib/sbctl/keys/KEK/KEK.key dbx
+		```
 
 
-1. TODO: Fix/verify: ~If `Setup Mode: Disabled` the `dbx` database needs to be signed with KEK first:~
-	```bash
-	sudo sign-efi-sig-list -g "$(< /var/lib/sbctl/GUID)" -k /var/lib/sbctl/keys/KEK/KEK.key -c /var/lib/sbctl/keys/KEK/KEK.pem dbx /var/lib/sbctl/keys/custom/dbx/original_dbx.esl /var/lib/sbctl/keys/custom/dbx/original_dbx.auth
-
-	sudo efi-updatevar -a -f /var/lib/sbctl/keys/custom/dbx/original_dbx.auth dbx
-	```
+	1. ~If `Setup Mode: Disabled` the `dbx` database needs to be signed with KEK first:~ (TODO: Fix/verify)
+		```bash
+		sudo sign-efi-sig-list -g "$(< /var/lib/sbctl/GUID)" -k /var/lib/sbctl/keys/KEK/KEK.key -c /var/lib/sbctl/keys/KEK/KEK.pem dbx /var/lib/sbctl/keys/custom/dbx/original_dbx.esl /var/lib/sbctl/keys/custom/dbx/original_dbx.auth
+	
+		sudo efi-updatevar -a -f /var/lib/sbctl/keys/custom/dbx/original_dbx.auth dbx
+		```
