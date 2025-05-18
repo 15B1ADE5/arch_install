@@ -1,2 +1,4 @@
 # arch_install
-Arch installation scripts and configs
+A set of arch installation manuals
+
+[Start](install.md)

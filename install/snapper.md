@@ -2,7 +2,11 @@
 
 ### Install
 ```bash
-sudo pacman -Sy snapper grub-btrfs snap-pac
+sudo pacman -Sy snapper snap-pac
+```
+If grub installed:
+```bash
+sudo pacman -Sy grub-btrfs
 yay -S snap-pac-grub
 ```
 
